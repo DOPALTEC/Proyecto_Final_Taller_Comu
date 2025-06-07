@@ -1,88 +1,107 @@
-%% ANÁLISIS DE POWER INTEGRITY - VERSIÓN COMPLETA FINAL
-%% Auto-detecta problemas de FDTD y continúa automáticamente
-%% Garantiza resultados completos para tu informe
-
+%% ANÁLISIS DE POWER INTEGRITY - VERSIÓN COMPLETA FINAL (LIMPIO)
 clear all; close all; clc;
+fprintf('=== POWER INTEGRITY: VERSIÓN COMPLETA ===\n\n');
 
-fprintf('=== POWER INTEGRITY: VERSIÓN COMPLETA (ANTI-CUELGUE) ===\n\n');
-
-%% ========================================================================
 %% 1. PARÁMETROS DE DISEÑO
-%% ========================================================================
+f_min = 1e3;
+f_max = 1e6;
+f_work = 50e3;
 
-% Frecuencias de análisis
-f_min = 1e3;                % 1 kHz
-f_max = 1e6;                % 1 MHz
-f_work = 50e3;              % 50 kHz (frecuencia de trabajo)
+L_pcb = 60.96e-3;
+W_pcb = 25.4e-3;
+h_pcb_total = 1.6e-3;
 
-% Dimensiones PCB (de FreeCAD/KiCad)
-L_pcb = 60.96e-3;         % longitud de la PCB
-W_pcb = 25.4e-3;          % ancho de la PCB
-h_pcb_total = 1.6e-3;     % grosor total de la PCB
+L_trace = 45e-3;
+W_trace = 2.5e-3;
 
-% Dimensiones de la traza
-L_trace = 45e-3;          % longitud de la traza
-W_trace = 2.5e-3;         % ancho de la traza
+t_copper = 35e-6;
+h_dielectric = h_pcb_total - 2 * t_copper;
 
-% Grosor de cobre y dieléctrico
-t_copper = 35e-6;                             % espesor de cada capa de cobre
-h_dielectric = h_pcb_total - 2 * t_copper;   % espesor del dieléctrico FR4
+eps_r = 4.4;
+tan_delta = 0.02;
 
-% Propiedades dieléctricas y pérdidas
-eps_r = 4.4;             % permitividad relativa FR4
-tan_delta = 0.02;        % tangente de pérdida FR4
+sigma_cu = 58e6;
+sigma_fr4 = 0.02;
+c0 = 299792458;
+mu0 = 4*pi*1e-7;
+eps0 = 8.854187817e-12;
 
-% Materiales y constantes físicas (sin cambios)
-sigma_cu = 58e6;          % conductividad cobre (S/m)
-sigma_fr4 = 0.02;         % conductividad FR4 (S/m)
-c0 = 299792458;           % velocidad de la luz en el vacío (m/s)
-mu0 = 4*pi*1e-7;          % permeabilidad magnética (H/m)
-eps0 = 8.854187817e-12;   % permitividad del vacío (F/m)
+%% 2. MODELO DE CAPACITORES
+C_ceram = 0.1e-6;
+R_ESR_ceram = 0.01;
+L_ESL_ceram = 0.5e-9;
 
+C_bulk = 10e-6;
+R_ESR_bulk = 0.1;
+L_ESL_bulk = 2e-9;
 
-fprintf('Configuración del análisis:\n');
-fprintf('- PCB: %.2f × %.2f × %.2f mm\n', L_pcb*1000, W_pcb*1000, h_pcb_total*1000);
-fprintf('- Microstrip: %.1f × %.2f mm\n', L_trace*1000, W_trace*1000);
-fprintf('- Metodología: Analítico + FDTD inteligente\n');
-fprintf('- Timeout FDTD: 3 minutos (auto-continúa)\n\n');
-
-
-%% ========================================================================
-%% 2. MODELADO DE CAPACITORES PARA INTEGRIDAD DE POTENCIA
-%% ========================================================================
-
-% Capacitor cerámico
-C_ceram = 0.1e-6;        % 0.1 uF
-R_ESR_ceram = 0.01;      % 10 mOhm ESR típico
-L_ESL_ceram = 0.5e-9;    % 0.5 nH ESL típico
-
-% Capacitor bulk
-C_bulk = 10e-6;          % 10 uF
-R_ESR_bulk = 0.1;        % 100 mOhm ESR típico
-L_ESL_bulk = 2e-9;       % 2 nH ESL típico
-
-% Vector de frecuencias para análisis
 f = logspace(log10(f_min), log10(f_max), 1000);
 omega = 2 * pi * f;
 
-% Impedancia del capacitor cerámico
 Z_ceram = R_ESR_ceram + 1j * omega * L_ESL_ceram - 1j ./ (omega * C_ceram);
-
-% Impedancia del capacitor bulk
 Z_bulk = R_ESR_bulk + 1j * omega * L_ESL_bulk - 1j ./ (omega * C_bulk);
-
-% Impedancia total en paralelo de capacitores
 Z_total_caps = 1 ./ (1 ./ Z_ceram + 1 ./ Z_bulk);
 
-% Gráfica de impedancia total de capacitores
 figure;
-semilogx(f, abs(Z_total_caps), 'LineWidth', 2);
-grid on; hold on;
+semilogx(f, abs(Z_total_caps), 'LineWidth', 2); hold on;
 semilogx(f, abs(Z_ceram), '--', 'LineWidth', 1);
 semilogx(f, abs(Z_bulk), ':', 'LineWidth', 1);
+grid on;
 xlabel('Frecuencia (Hz)');
 ylabel('Impedancia (Ohm)');
-title('Impedancia de Capacitores Cerámico y Bulk en Paralelo');
-legend('Total (Cerámico + Bulk)', 'Cerámico', 'Bulk', 'Location', 'Best');
+title('Impedancia: Capacitores Cerámico y Bulk');
+legend('Total', 'Cerámico', 'Bulk');
 
-fprintf('Análisis de impedancia de capacitores completado.\n\n');
+fprintf('Análisis de capacitores completado.\n\n');
+
+%% PARTE I: ANÁLISIS ANALÍTICO (IPC-2141A)
+fprintf('PARTE I: ANÁLISIS ANALÍTICO\n');
+tic_analytical = tic;
+
+freq_analytical = f;
+omega_analytical = omega;
+w_h = W_trace / h_pcb_total;
+
+if w_h <= 1
+    eps_eff = (eps_r + 1)/2 + (eps_r - 1)/2 * (1/sqrt(1 + 12/w_h) + 0.04*(1-w_h)^2);
+else
+    eps_eff = (eps_r + 1)/2 + (eps_r - 1)/2 / sqrt(1 + 12/w_h);
+end
+
+delta_w = t_copper * (1 + 1/(2*h_pcb_total/t_copper)) * (1 + log(4*pi*W_trace/t_copper)/(2*pi));
+w_eff = W_trace + delta_w;
+w_h_eff = w_eff / h_pcb_total;
+
+if w_h_eff <= 1
+    Z0_analytical = (60/sqrt(eps_eff)) * log(8/w_h_eff + w_h_eff/4);
+else
+    Z0_analytical = (120*pi) / (sqrt(eps_eff) * (w_h_eff + 1.393 + 0.667*log(w_h_eff + 1.444)));
+end
+
+alpha_d = (pi * freq_analytical' * sqrt(eps_r) * tan_delta) ./ (c0 * sqrt(eps_eff));
+Rs = sqrt(pi * freq_analytical' * mu0 / sigma_cu);
+Sr = 1 + (2/pi) * atan(1.4 * (1e-6 ./ sqrt(2./(pi*freq_analytical'*mu0*sigma_cu))).^1.8);
+alpha_c = (Rs .* Sr) ./ (Z0_analytical * w_eff) .* (1 + h_pcb_total/w_eff) ./ (2 * h_pcb_total);
+alpha_total = alpha_d + alpha_c;
+
+beta = 2*pi*freq_analytical' * sqrt(eps_eff) / c0;
+gamma = alpha_total + 1j*beta;
+
+ZL_vec = Z_total_caps(:); % Impedancia de carga en función de frecuencia
+Gamma_L = (ZL_vec - Z0_analytical) ./ (ZL_vec + Z0_analytical);
+
+S11_analytical = Gamma_L .* (1 - exp(-2*gamma*L_trace)) ./ (1 - Gamma_L.^2 .* exp(-2*gamma*L_trace));
+S21_analytical = (1 - Gamma_L.^2) .* exp(-gamma*L_trace) ./ (1 - Gamma_L.^2 .* exp(-2*gamma*L_trace));
+
+Z_in_analytical = Z0_analytical .* (ZL_vec + Z0_analytical .* tanh(gamma * L_trace)) ./ ...
+                  (Z0_analytical + ZL_vec .* tanh(gamma * L_trace));
+VSWR_analytical = (1 + abs(S11_analytical)) ./ (1 - abs(S11_analytical));
+
+time_analytical = toc(tic_analytical);
+fprintf('Tiempo: %.3f s\n', time_analytical);
+fprintf('Z0: %.1f Ω\n', Z0_analytical);
+fprintf('ε_eff: %.2f\n', eps_eff);
+
+[~, idx_work_analytical] = min(abs(freq_analytical - f_work));
+fprintf('Z_in @ 50kHz: %.1f Ω\n', abs(Z_in_analytical(idx_work_analytical)));
+fprintf('VSWR @ 50kHz: %.2f\n', VSWR_analytical(idx_work_analytical));
