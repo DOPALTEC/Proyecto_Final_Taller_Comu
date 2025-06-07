@@ -16,25 +16,29 @@ f_max = 1e6;                % 1 MHz
 f_work = 50e3;              % 50 kHz (frecuencia de trabajo)
 
 % Dimensiones PCB (de FreeCAD/KiCad)
-L_pcb = 60.96e-3;           % m - longitud PCB
-W_pcb = 25.4e-3;            % m - ancho PCB
-h_pcb = 1.69e-3;            % m - grosor PCB FR4
+L_pcb = 60.96e-3;         % longitud de la PCB
+W_pcb = 25.4e-3;          % ancho de la PCB
+h_pcb_total = 1.6e-3;     % grosor total de la PCB
 
-% Dimensiones Microstrip
-L_trace = 45e-3;            % m - longitud traza
-W_trace = 2.5e-3;           % m - ancho traza
+% Dimensiones de la traza
+L_trace = 45e-3;          % longitud de la traza
+W_trace = 2.5e-3;         % ancho de la traza
 
-% Materiales
-eps_r = 4.3;                % FR4 permitividad relativa
-sigma_cu = 58e6;            % S/m - Conductividad cobre
-sigma_fr4 = 0.02;           % S/m - Conductividad FR4
-t_copper = 35e-6;           % m - grosor cobre
-tan_delta = 0.025;          % Factor de pérdidas FR4
+% Grosor de cobre y dieléctrico
+t_copper = 35e-6;                             % espesor de cada capa de cobre
+h_dielectric = h_pcb_total - 2 * t_copper;   % espesor del dieléctrico FR4
 
-% Constantes físicas
-c0 = 299792458;             % m/s
-mu0 = 4*pi*1e-7;           % H/m
-eps0 = 8.854187817e-12;    % F/m
+% Propiedades dieléctricas y pérdidas
+eps_r = 4.4;             % permitividad relativa FR4
+tan_delta = 0.02;        % tangente de pérdida FR4
+
+% Materiales y constantes físicas (sin cambios)
+sigma_cu = 58e6;          % conductividad cobre (S/m)
+sigma_fr4 = 0.02;         % conductividad FR4 (S/m)
+c0 = 299792458;           % velocidad de la luz en el vacío (m/s)
+mu0 = 4*pi*1e-7;          % permeabilidad magnética (H/m)
+eps0 = 8.854187817e-12;   % permitividad del vacío (F/m)
+
 
 fprintf('Configuración del análisis:\n');
 fprintf('- PCB: %.2f × %.2f × %.2f mm\n', L_pcb*1000, W_pcb*1000, h_pcb*1000);

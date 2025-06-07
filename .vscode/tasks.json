@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Octave Script",
+      "type": "shell",
+      "command": "C:\\Users\\39245\\OneDrive - Samtec\\Desktop\\UNI\\octave-10.2.0-w64\\mingw64\\bin\\octave.exe",
+      "args": [
+        "--persist",
+        "PCB_funcional_v2.m"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
